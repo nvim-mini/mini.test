@@ -1,21 +1,21 @@
 *mini.test* Test Neovim plugins
-*MiniTest*
 
 MIT License Copyright (c) 2022 Evgeni Chasnovski
 
-==============================================================================
-
+------------------------------------------------------------------------------
+                                                                      *MiniTest*
 Features:
 - Test action is defined as a named callable entry of a table.
 
 - Helper for creating child Neovim process which is designed to be used in
   tests (including taking and verifying screenshots). See
-  |MiniTest.new_child_neovim()| and |Minitest.expect.reference_screenshot()|.
+  |MiniTest.new_child_neovim()| and |MiniTest.expect.reference_screenshot()|.
 
 - Hierarchical organization of tests with custom hooks, parametrization,
   and user data. See |MiniTest.new_set()|.
 
-- Emulation of 'Olivine-Labs/busted' interface (`describe`, `it`, etc.).
+- Emulation of [lunarmodules/busted](https://github.com/lunarmodules/busted)
+  interface (`describe`, `it`, etc.).
 
 - Predefined small yet usable set of expectations (`assert`-like functions).
   See |MiniTest.expect|.
@@ -51,7 +51,7 @@ For more information see:
 - Code of this plugin's tests. Consider it to be an example of intended
   way to use 'mini.test' for test organization and creation.
 
-# Workflow
+# Workflow ~
 
 - Organize tests in separate files. Each test file should return a test set
   (explicitly or implicitly by using "busted" style functions).
@@ -84,13 +84,14 @@ To stop module from showing non-error feedback, set `config.silent = true`.
 
 # Comparisons ~
 
-- Testing infrastructure from 'nvim-lua/plenary.nvim':
+- Testing infrastructure from
+  [nvim-lua/plenary.nvim](https://github.com/nvim-lua/plenary.nvim):
     - Executes each file in separate headless Neovim process with customizable
       'init.vim' file. While 'mini.test' executes everything in current
       Neovim process encouraging writing tests with help of manually
       managed child Neovim process (see |MiniTest.new_child_neovim()|).
     - Tests are expected to be written with embedded simplified versions of
-      'Olivine-Labs/busted' and 'Olivine-Labs/luassert'. While 'mini.test'
+      'lunarmodules/busted' and 'lunarmodules/luassert'. While 'mini.test'
       uses concepts of test set (see |MiniTest.new_set()|) and test case
       (see |MiniTest-test-case|). It also can emulate bigger part of
       "busted" framework.
@@ -121,13 +122,13 @@ Some hints for converting from 'plenary.nvim' tests to 'mini.test':
 
 # Highlight groups ~
 
-* `MiniTestEmphasis` - emphasis highlighting. By default it is a bold text.
-* `MiniTestFail` - highlighting of failed cases. By default it is a bold
+- `MiniTestEmphasis` - emphasis highlighting. By default it is a bold text.
+- `MiniTestFail` - highlighting of failed cases. By default it is a bold
   text with `vim.g.terminal_color_1` color (red).
-* `MiniTestPass` - highlighting of passed cases. By default it is a bold
+- `MiniTestPass` - highlighting of passed cases. By default it is a bold
   text with `vim.g.terminal_color_2` color (green).
 
-To change any highlight group, modify it directly with |:highlight|.
+To change any highlight group, set it directly with |nvim_set_hl()|.
 
 # Disabling ~
 
@@ -154,9 +155,7 @@ Usage ~
 ------------------------------------------------------------------------------
                                                                *MiniTest.config*
                                `MiniTest.config`
-Module config
-
-Default values:
+Defaults ~
 >lua
   MiniTest.config = {
     -- Options for collection of test cases. See `:h MiniTest.collect()`.
@@ -313,14 +312,14 @@ Fields ~
 {desc} `(table)` Description: array of fields from nested test sets.
 {exec} `(table|nil)` Information about test case execution. Value of `nil` means
   that this particular case was not (yet) executed. Has following fields:
-    - <fails> - array of strings with failing information.
-    - <notes> - array of strings with non-failing information.
-    - <state> - state of test execution. One of:
-        - 'Executing <name of what is being executed>' (during execution).
-        - 'Pass' (no fails, no notes).
-        - 'Pass with notes' (no fails, some notes).
-        - 'Fail' (some fails, no notes).
-        - 'Fail with notes' (some fails, some notes).
+  - <fails> - array of strings with failing information.
+  - <notes> - array of strings with non-failing information.
+  - <state> - state of test execution. One of:
+      - 'Executing <name of what is being executed>' (during execution).
+      - 'Pass' (no fails, no notes).
+      - 'Pass with notes' (no fails, some notes).
+      - 'Fail' (some fails, no notes).
+      - 'Fail with notes' (some fails, some notes).
 {hooks} `(table)` Hooks to be executed as part of test case. Has fields:
   - <pre> and <post> - arrays of functions to be consecutively executed
     before and after every execution of `test`.
@@ -349,7 +348,7 @@ Parameters ~
                            `MiniTest.add_note`({msg})
 Add note to currently executed test case
 
-Appends `msg` to `exec.notes` field of |MiniTest.current.case|.
+Appends `msg` to `exec.notes` field of `case` in |MiniTest.current|.
 
 Parameters ~
 {msg} `(string)` Note to add.
@@ -443,7 +442,7 @@ Overview of collection process:
 
 Parameters ~
 {opts} `(table|nil)` Options controlling case collection. Possible fields:
-  - <emulate_busted> - whether to emulate 'Olivine-Labs/busted' interface.
+  - <emulate_busted> - whether to emulate 'lunarmodules/busted' interface.
     It emulates these global functions: `describe`, `it`, `setup`, `teardown`,
     `before_each`, `after_each`. Use |MiniTest.skip()| instead of `pending()`
     and |MiniTest.finally()| instead of `finally`.
@@ -572,7 +571,7 @@ Expect equality to reference screenshot
 
 Parameters ~
 {screenshot} `(table|nil)` Array with screenshot information. Usually an output
-  of `child.get_screenshot()` (see |MiniTest-child-neovim.get_screenshot()|).
+  of `child.get_screenshot()` (see |MiniTest-child-neovim-get_screenshot()|).
   If `nil`, expectation passed.
 {path} `(string|nil)` Path to reference screenshot. If `nil`, constructed
   automatically in directory `opts.directory` from current case info and
@@ -765,14 +764,14 @@ Class ~
 {MiniTest.child}
 
 Fields ~
-{start} `(function)` Start child process. See |MiniTest-child-neovim.start()|.
+{start} `(function)` Start child process. See |MiniTest-child-neovim-start()|.
 {stop} `(function)` Stop current child process.
 {restart} `(function)` Restart child process: stop if running and then
   start a new one. Takes same arguments as `child.start()` but uses values
   from most recent `start()` call as defaults.
 
 {type_keys} `(function)` Emulate typing keys.
-  See |MiniTest-child-neovim.type_keys()|. Doesn't check for blocked state.
+  See |MiniTest-child-neovim-type_keys()|. Doesn't check for blocked state.
 
 {cmd} `(function)` Execute Vimscript code from a string.
   A wrapper for |nvim_exec()| without capturing output.
@@ -802,15 +801,15 @@ Fields ~
 
 {diagnostic} `(table)` Redirection table for |vim.diagnostic|.
 {fn} `(table)` Redirection table for |vim.fn|.
-{highlight} `(table)` Redirection table for `vim.highlight` (|lua-highlight)|.
+{highlight} `(table)` Redirection table for |vim.highlight|.
 {hl} `(table)` Redirection table for |vim.hl|.
 {json} `(table)` Redirection table for `vim.json`.
 {loop} `(table)` Redirection table for |vim.loop|.
-{lsp} `(table)` Redirection table for `vim.lsp` (|lsp-core)|.
+{lsp} `(table)` Redirection table for `vim.lsp` (|lsp-core|).
 {mpack} `(table)` Redirection table for |vim.mpack|.
 {spell} `(table)` Redirection table for |vim.spell|.
-{treesitter} `(table)` Redirection table for |vim.treesitter|.
-{ui} `(table)` Redirection table for `vim.ui` (|lua-ui|). Currently of no
+{treesitter} `(table)` Redirection table for `vim.treesitter` (|lua-treesitter-core|).
+{ui} `(table)` Redirection table for |vim.ui|. Currently of no
   use because it requires sending function through RPC, which is impossible
   at the moment.
 {fs} `(table)` Redirection table for |vim.fs|.
@@ -828,8 +827,8 @@ Fields ~
 {wo} `(table)` Redirection table for |vim.wo|.
 
 ------------------------------------------------------------------------------
-                                                 *MiniTest-child-neovim.start()*
-child.start(args, opts) ~
+                                                 *MiniTest-child-neovim-start()*
+                          `child.start`({args}, {opts})
 
 Start child process and connect to it. Won't work if child is already running.
 
@@ -838,6 +837,7 @@ Parameters ~
   the following default arguments (see |startup-options|): >lua
   { '--clean', '-n', '--listen', <some address>,
     '--headless', '--cmd', 'set lines=24 columns=80' }
+<
 {opts} `(table|nil)` Options:
   - <nvim_executable> - name of Neovim executable. Default: |v:progpath|.
   - <connection_timeout> - stop trying to connect after this amount of
@@ -854,8 +854,8 @@ Usage ~
   child.start({ '-u', 'scripts/minimal_init.lua' })
 <
 ------------------------------------------------------------------------------
-                                             *MiniTest-child-neovim.type_keys()*
-child.type_keys(wait, ...) ~
+                                             *MiniTest-child-neovim-type_keys()*
+                       `child.type_keys`({wait}, {...})
 
 Basically a wrapper for |nvim_input()| applied inside child process.
 Differences:
@@ -884,8 +884,8 @@ Usage ~
   child.type_keys('i', 'Hello world', '<Esc>')
 <
 ------------------------------------------------------------------------------
-                                        *MiniTest-child-neovim.get_screenshot()*
-child.get_screenshot() ~
+                                        *MiniTest-child-neovim-get_screenshot()*
+                        `child.get_screenshot`({opts})
 
 Compute what is displayed on (default TUI) screen and how it is displayed.
 This basically calls |screenstring()| and |screenattr()| for every visible

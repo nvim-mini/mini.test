@@ -30,7 +30,7 @@ https://user-images.githubusercontent.com/24854248/175773105-f33cd3bb-6f62-4a61-
 ## Features
 
 - Test action is defined as a named callable entry of a table.
-- Helper for creating child Neovim process which is designed to be used in tests (including taking and verifying screenshots). See help for `MiniTest.new_child_neovim()` and `Minitest.expect.reference_screenshot()`.
+- Helper for creating child Neovim process which is designed to be used in tests (including taking and verifying screenshots). See help for `MiniTest.new_child_neovim()` and `MiniTest.expect.reference_screenshot()`.
 - Hierarchical organization of tests with custom hooks, parametrization, and user data. See help for `MiniTest.new_set()`.
 - Emulation of [Olivine-Labs/busted](https://github.com/Olivine-Labs/busted) interface (`describe`, `it`, etc.).
 - Predefined small yet usable set of expectations (`assert`-like functions). See help for `MiniTest.expect`.

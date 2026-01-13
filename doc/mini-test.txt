@@ -513,6 +513,7 @@ Table with expectation functions
 Each function has the following behavior:
 - Silently returns `true` if expectation is fulfilled.
 - Throws an informative error with information helpful for debugging.
+  Allows customizable fail reason to provide more context.
 
 Mostly designed to be used within 'mini.test' framework.
 
@@ -520,11 +521,11 @@ Usage ~
 >lua
   local x = 1 + 1
   MiniTest.expect.equality(x, 2) -- passes
-  MiniTest.expect.equality(x, 1) -- fails
+  MiniTest.expect.equality(x, 1, { fail_reason = 'Not equal' }) -- fails
 <
 ------------------------------------------------------------------------------
                                                     *MiniTest.expect.equality()*
-                  `MiniTest.expect.equality`({left}, {right})
+              `MiniTest.expect.equality`({left}, {right}, {opts})
 Expect equality of two objects
 
 Equality is tested via |vim.deep_equal()|.
@@ -532,10 +533,14 @@ Equality is tested via |vim.deep_equal()|.
 Parameters ~
 {left} `(any)` First object.
 {right} `(any)` Second object.
+{opts} `(table|nil)` Options. Possible fields:
+  - <fail_reason> `(string|function)` - reason for failing expectation.
+    a function is called with expectation input and should return a string.
+    Default: `nil` for default reason like "Failed expectation for ...".
 
 ------------------------------------------------------------------------------
                                                  *MiniTest.expect.no_equality()*
-                 `MiniTest.expect.no_equality`({left}, {right})
+             `MiniTest.expect.no_equality`({left}, {right}, {opts})
 Expect no equality of two objects
 
 Equality is tested via |vim.deep_equal()|.
@@ -543,24 +548,36 @@ Equality is tested via |vim.deep_equal()|.
 Parameters ~
 {left} `(any)` First object.
 {right} `(any)` Second object.
+{opts} `(table|nil)` Options. Possible fields:
+  - <fail_reason> `(string|function)` - reason for failing expectation.
+    a function is called with expectation input and should return a string.
+    Default: `nil` for default reason like "Failed expectation for ...".
 
 ------------------------------------------------------------------------------
                                                        *MiniTest.expect.error()*
-                 `MiniTest.expect.error`({f}, {pattern}, {...})
+             `MiniTest.expect.error`({f}, {pattern}, {opts}, {...})
 Expect function call to raise error
 
 Parameters ~
 {f} `(function)` Function to be tested for raising error.
 {pattern} `(string|nil)` Pattern which error message should match.
   Use `nil` or empty string to not test for pattern matching.
+{opts} `(table|nil)` Options. Possible fields:
+  - <fail_reason> `(string|function)` - reason for failing expectation.
+    a function is called with expectation input and should return a string.
+    Default: `nil` for default reason like "Failed expectation for ...".
 
 ------------------------------------------------------------------------------
                                                     *MiniTest.expect.no_error()*
-                     `MiniTest.expect.no_error`({f}, {...})
+                 `MiniTest.expect.no_error`({f}, {opts}, {...})
 Expect function call to not raise error
 
 Parameters ~
 {f} `(function)` Function to be tested for not raising error.
+{opts} `(table|nil)` Options. Possible fields:
+  - <fail_reason> `(string|function)` - reason for failing expectation.
+    a function is called with expectation input and should return a string.
+    Default: `nil` for default reason like "Failed expectation for ...".
 
 ------------------------------------------------------------------------------
                                         *MiniTest.expect.reference_screenshot()*
@@ -586,6 +603,9 @@ Parameters ~
     if `false` - do not ignore any. Default: `false`.
   - <directory> `(string)` - directory where automatically constructed `path`
     is located. Default: "tests/screenshots".
+  - <fail_reason> `(string|function)` - reason for failing expectation.
+    a function is called with expectation input and should return a string.
+    Default: `nil` for default reason like "Failed expectation for ...".
 
 ------------------------------------------------------------------------------
                                                     *MiniTest.new_expectation()*

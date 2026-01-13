@@ -137,6 +137,10 @@
 --- recipes.
 ---@tag MiniTest
 
+---@alias __test_expect_fail_reason - <fail_reason> `(string|function)` - reason for failing expectation.
+---     a function is called with expectation input and should return a string.
+---     Default: `nil` for default reason like "Failed expectation for ...".
+
 -- Module definition ==========================================================
 local MiniTest = {}
 local H = {}
@@ -648,13 +652,14 @@ MiniTest.is_executing = function() return H.cache.is_executing == true end
 --- Each function has the following behavior:
 --- - Silently returns `true` if expectation is fulfilled.
 --- - Throws an informative error with information helpful for debugging.
+---   Allows customizable fail reason to provide more context.
 ---
 --- Mostly designed to be used within 'mini.test' framework.
 ---
 ---@usage >lua
 ---   local x = 1 + 1
 ---   MiniTest.expect.equality(x, 2) -- passes
----   MiniTest.expect.equality(x, 1) -- fails
+---   MiniTest.expect.equality(x, 1, { fail_reason = 'Not equal' }) -- fails
 --- <
 MiniTest.expect = {}
 
@@ -664,11 +669,15 @@ MiniTest.expect = {}
 ---
 ---@param left any First object.
 ---@param right any Second object.
-MiniTest.expect.equality = function(left, right)
+---@param opts table|nil Options. Possible fields:
+---   __test_expect_fail_reason
+MiniTest.expect.equality = function(left, right, opts)
   if vim.deep_equal(left, right) then return true end
 
+  opts = opts or {}
+  local fail_reason = H.normalize_reason(opts.fail_reason, 'Failed expectation for equality', left, right)
   local context = string.format('Left:  %s\nRight: %s', vim.inspect(left), vim.inspect(right))
-  H.error_expect('equality', context)
+  H.error_with_emphasis(fail_reason, context)
 end
 
 --- Expect no equality of two objects
@@ -677,11 +686,15 @@ end
 ---
 ---@param left any First object.
 ---@param right any Second object.
-MiniTest.expect.no_equality = function(left, right)
+---@param opts table|nil Options. Possible fields:
+---   __test_expect_fail_reason
+MiniTest.expect.no_equality = function(left, right, opts)
   if not vim.deep_equal(left, right) then return true end
 
+  opts = opts or {}
+  local fail_reason = H.normalize_reason(opts.fail_reason, 'Failed expectation for *no* equality', left, right)
   local context = string.format('Object: %s', vim.inspect(left))
-  H.error_expect('*no* equality', context)
+  H.error_with_emphasis(fail_reason, context)
 end
 
 --- Expect function call to raise error
@@ -689,53 +702,69 @@ end
 ---@param f function Function to be tested for raising error.
 ---@param pattern string|nil Pattern which error message should match.
 ---   Use `nil` or empty string to not test for pattern matching.
-MiniTest.expect.error = function(f, pattern, ...)
+---@param opts table|nil Options. Possible fields:
+---   __test_expect_fail_reason
+MiniTest.expect.error = function(f, pattern, opts, ...)
   H.check_type('pattern', pattern, 'string', true)
 
   -- Provide backward compatibility for `(f, pattern, ...)` signature.
   -- TODO: Remove after releasing 'mini.nvim' 0.18.0
-  if select('#', ...) > 0 then
+  local args = { ... }
+  local is_valid_opts = type(opts) == 'table'
+    and (opts.fail_reason == nil or type(opts.fail_reason) == 'string' or vim.is_callable(opts.fail_reason))
+  if select('#', ...) > 0 or not (opts == nil or is_valid_opts) then
+    table.insert(args, 1, opts)
+    opts = {}
     vim.notify(
       '(mini.test) `expect.error` now does not accept extra arguments for tested function.'
-        .. " It will work until the next 'mini.nvim' release, but not after that."
+        .. " It will mostly work until the next 'mini.nvim' release, but not after that."
         .. ' Use them explicitly inside anonymous function: `expect.error(f, "", 1, 2)` ->'
         .. ' `expect.error(function() f(1, 2) end, "")`.'
         .. '\nSorry for the inconvenience.',
       vim.log.levels.WARN
     )
   end
-  local ok, err = pcall(f, ...)
+  local ok, err = pcall(f, unpack(args))
 
   err = tostring(err)
   local has_matched_error = not ok and string.find(err, pattern or '') ~= nil
   if has_matched_error then return true end
 
-  local matching_pattern = pattern == nil and '' or (' matching pattern %s'):format(vim.inspect(pattern))
+  opts = opts or {}
+  local pattern_suffix = pattern == nil and '' or (' matching pattern ' .. vim.inspect(pattern))
+  local fail_reason = H.normalize_reason(opts.fail_reason, 'Failed expectation for error' .. pattern_suffix, f, pattern)
   local context = ok and 'Observed no error' or ('Observed error: ' .. err)
-
-  H.error_expect('error' .. matching_pattern, context)
+  H.error_with_emphasis(fail_reason, context)
 end
 
 --- Expect function call to not raise error
 ---
 ---@param f function Function to be tested for not raising error.
-MiniTest.expect.no_error = function(f, ...)
+---@param opts table|nil Options. Possible fields:
+---   __test_expect_fail_reason
+MiniTest.expect.no_error = function(f, opts, ...)
   -- Provide backward compatibility for `(f, ...)` signature.
   -- TODO: Remove after releasing 'mini.nvim' 0.18.0
-  if select('#', ...) > 0 then
+  local args = { ... }
+  local is_valid_opts = type(opts) == 'table' and (opts.fail_prefix == nil or type(opts.fail_prefix) == 'string')
+  if select('#', ...) > 0 or not (opts == nil or is_valid_opts) then
+    table.insert(args, 1, opts)
+    opts = {}
     vim.notify(
       '(mini.test) `expect.no_error` now does not accept extra arguments for tested function.'
-        .. " It will work until the next 'mini.nvim' release, but not after that."
+        .. " It will mostly work until the next 'mini.nvim' release, but not after that."
         .. ' Use them explicitly inside anonymous function: `expect.no_error(f, 1, 2)` ->'
         .. ' `expect.no_error(function() f(1, 2) end)`.'
         .. '\nSorry for the inconvenience.',
       vim.log.levels.WARN
     )
   end
-  local ok, err = pcall(f, ...)
+  local ok, err = pcall(f, unpack(args))
   if ok then return true end
 
-  H.error_expect('*no* error', 'Observed error: ' .. tostring(err))
+  opts = opts or {}
+  local fail_reason = H.normalize_reason(opts.fail_reason, 'Failed expectation for *no* error', f)
+  H.error_with_emphasis(fail_reason, 'Observed error: ' .. tostring(err))
 end
 
 --- Expect equality to reference screenshot
@@ -758,6 +787,7 @@ end
 ---     if `false` - do not ignore any. Default: `false`.
 ---   - <directory> `(string)` - directory where automatically constructed `path`
 ---     is located. Default: "tests/screenshots".
+---   __test_expect_fail_reason
 MiniTest.expect.reference_screenshot = function(screenshot, path, opts)
   if screenshot == nil then return true end
 
@@ -810,10 +840,11 @@ MiniTest.expect.reference_screenshot = function(screenshot, path, opts)
   local same_attr, cause_attr = H.screenshot_compare_part('attr', reference, screenshot, opts)
   if same_text and same_attr then return true end
 
+  local fail_reason_fallback = 'Failed expectation for screenshot equality to reference at ' .. vim.inspect(path)
+  local fail_reason = H.normalize_reason(opts.fail_reason, fail_reason_fallback, screenshot, path)
   local cause = same_text and cause_attr or cause_text
-  local subject = 'screenshot equality to reference at ' .. vim.inspect(path)
   local context = string.format('%s\nReference:\n%s\n\nObserved:\n%s', cause, tostring(reference), tostring(screenshot))
-  H.error_expect(subject, context)
+  H.error_with_emphasis(fail_reason, context)
 end
 
 --- Create new expectation function
@@ -843,7 +874,7 @@ MiniTest.new_expectation = function(subject, predicate, fail_context)
 
     local cur_subject = vim.is_callable(subject) and subject(...) or subject
     local cur_context = vim.is_callable(fail_context) and fail_context(...) or fail_context
-    H.error_expect(cur_subject, cur_context)
+    H.error_with_emphasis('Failed expectation for ' .. cur_subject, cur_context)
   end
 end
 
@@ -2210,13 +2241,14 @@ H.has_fails = function(cases)
 end
 
 -- Expectation utilities ------------------------------------------------------
-H.error_expect = function(subject, ...)
-  local msg = string.format('Failed expectation for %s.', subject)
-  H.error_with_emphasis(msg, ...)
+H.normalize_reason = function(reason, fallback, ...)
+  if vim.is_callable(reason) then reason = reason(...) end
+  if type(reason) ~= 'string' then reason = fallback end
+  return reason
 end
 
-H.error_with_emphasis = function(msg, ...)
-  local lines = { '', H.add_style(msg, 'emphasis'), ... }
+H.error_with_emphasis = function(msg, context)
+  local lines = { '', H.add_style(msg, 'emphasis'), context }
   error(table.concat(lines, '\n'), 0)
 end
 

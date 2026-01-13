@@ -686,35 +686,56 @@ end
 
 --- Expect function call to raise error
 ---
----@param f function|table Callable to be tested for raising error.
+---@param f function Function to be tested for raising error.
 ---@param pattern string|nil Pattern which error message should match.
 ---   Use `nil` or empty string to not test for pattern matching.
----@param ... any Extra arguments with which `f` will be called.
 MiniTest.expect.error = function(f, pattern, ...)
   H.check_type('pattern', pattern, 'string', true)
 
+  -- Provide backward compatibility for `(f, pattern, ...)` signature.
+  -- TODO: Remove after releasing 'mini.nvim' 0.18.0
+  if select('#', ...) > 0 then
+    vim.notify(
+      '(mini.test) `expect.error` now does not accept extra arguments for tested function.'
+        .. " It will work until the next 'mini.nvim' release, but not after that."
+        .. ' Use them explicitly inside anonymous function: `expect.error(f, "", 1, 2)` ->'
+        .. ' `expect.error(function() f(1, 2) end, "")`.'
+        .. '\nSorry for the inconvenience.',
+      vim.log.levels.WARN
+    )
+  end
   local ok, err = pcall(f, ...)
-  err = err or ''
+
+  err = tostring(err)
   local has_matched_error = not ok and string.find(err, pattern or '') ~= nil
   if has_matched_error then return true end
 
   local matching_pattern = pattern == nil and '' or (' matching pattern %s'):format(vim.inspect(pattern))
-  local subject = 'error' .. matching_pattern
   local context = ok and 'Observed no error' or ('Observed error: ' .. err)
 
-  H.error_expect(subject, context)
+  H.error_expect('error' .. matching_pattern, context)
 end
 
 --- Expect function call to not raise error
 ---
----@param f function|table Callable to be tested for raising error.
----@param ... any Extra arguments with which `f` will be called.
+---@param f function Function to be tested for not raising error.
 MiniTest.expect.no_error = function(f, ...)
+  -- Provide backward compatibility for `(f, ...)` signature.
+  -- TODO: Remove after releasing 'mini.nvim' 0.18.0
+  if select('#', ...) > 0 then
+    vim.notify(
+      '(mini.test) `expect.no_error` now does not accept extra arguments for tested function.'
+        .. " It will work until the next 'mini.nvim' release, but not after that."
+        .. ' Use them explicitly inside anonymous function: `expect.no_error(f, 1, 2)` ->'
+        .. ' `expect.no_error(function() f(1, 2) end)`.'
+        .. '\nSorry for the inconvenience.',
+      vim.log.levels.WARN
+    )
+  end
   local ok, err = pcall(f, ...)
-  err = err or ''
   if ok then return true end
 
-  H.error_expect('*no* error', 'Observed error: ' .. err)
+  H.error_expect('*no* error', 'Observed error: ' .. tostring(err))
 end
 
 --- Expect equality to reference screenshot

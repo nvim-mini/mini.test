@@ -550,10 +550,9 @@ Parameters ~
 Expect function call to raise error
 
 Parameters ~
-{f} `(function|table)` Callable to be tested for raising error.
+{f} `(function)` Function to be tested for raising error.
 {pattern} `(string|nil)` Pattern which error message should match.
   Use `nil` or empty string to not test for pattern matching.
-{...} `(any)` Extra arguments with which `f` will be called.
 
 ------------------------------------------------------------------------------
                                                     *MiniTest.expect.no_error()*
@@ -561,8 +560,7 @@ Parameters ~
 Expect function call to not raise error
 
 Parameters ~
-{f} `(function|table)` Callable to be tested for raising error.
-{...} `(any)` Extra arguments with which `f` will be called.
+{f} `(function)` Function to be tested for not raising error.
 
 ------------------------------------------------------------------------------
                                         *MiniTest.expect.reference_screenshot()*

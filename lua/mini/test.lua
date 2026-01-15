@@ -794,16 +794,6 @@ MiniTest.expect.reference_screenshot = function(screenshot, path, opts)
   local default_opts = { force = false, ignore_text = false, ignore_attr = false, directory = 'tests/screenshots' }
   opts = vim.tbl_extend('force', default_opts, opts or {})
 
-  -- TODO: Remove after releasing 'mini.nvim' 0.17.0
-  if opts.ignore_lines ~= nil then
-    vim.notify(
-      '(mini.test) `ignore_lines` is soft deprecated in favor of separate `ignore_text` and `ignore_attr`.'
-        .. ' It will work at least until the next release, after which its support will be removed.'
-        .. ' Sorry for the inconvenience.'
-    )
-  end
-  opts.ignore_lines = opts.ignore_lines or {}
-
   H.cache.n_screenshots = H.cache.n_screenshots + 1
 
   if path == nil then
@@ -2320,7 +2310,7 @@ H.screenshot_encode_attr = function(attr)
 end
 
 H.screenshot_compare_part = function(part, ref, obs, opts)
-  local ignore_part, ignore_lines = opts['ignore_' .. part], opts.ignore_lines
+  local ignore_part = opts['ignore_' .. part]
   if ignore_part == true then return true, '' end
 
   local compare = function(x, y, desc)
@@ -2335,7 +2325,7 @@ H.screenshot_compare_part = function(part, ref, obs, opts)
   local lines_to_check = {}
   for i = 1, #ref[part] do
     local is_ignore_part = type(ignore_part) == 'table' and vim.tbl_contains(ignore_part, i)
-    if not (is_ignore_part or vim.tbl_contains(ignore_lines, i)) then table.insert(lines_to_check, i) end
+    if not is_ignore_part then table.insert(lines_to_check, i) end
   end
 
   for _, i in ipairs(lines_to_check) do

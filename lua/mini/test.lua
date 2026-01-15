@@ -925,11 +925,8 @@ MiniTest.gen_reporter.buffer = function(opts)
   --   in `stdout`, albeit easier to overcome:
   --     - Handling of scroll.
   --     - Hard wrapping of lines leading to need of using window width.
-  opts = vim.tbl_deep_extend(
-    'force',
-    { group_depth = 1, throttle_delay = 10, window = H.buffer_reporter.default_window_opts() },
-    opts or {}
-  )
+  local default_opts = { group_depth = 1, throttle_delay = 10, window = H.buffer_reporter.default_window_opts() }
+  opts = vim.tbl_deep_extend('force', default_opts, opts or {})
 
   local buf_id, win_id
   local is_valid_buf_win = function() return vim.api.nvim_buf_is_valid(buf_id) and vim.api.nvim_win_is_valid(win_id) end
@@ -2035,38 +2032,36 @@ H.overview_reporter.start_lines = function(cases, groups)
 end
 
 H.overview_reporter.finish_lines = function(cases)
-  local res = {}
-
-  -- Show all fails and notes
+  -- Gather fails and notes (colored based on case fail/pass)
+  local fails, notes = {}, {}
   local n_fails, n_notes = 0, 0
   for _, c in ipairs(cases) do
     local stringid = H.case_to_stringid(c)
     local exec = c.exec == nil and { fails = {}, notes = {} } or c.exec
 
-    local fail_prefix = string.format('%s in %s: ', H.add_style('FAIL', 'fail'), stringid)
-    local note_color = #exec.fails > 0 and 'fail' or 'pass'
-    local note_prefix = string.format('%s in %s: ', H.add_style('NOTE', note_color), stringid)
+    if #exec.fails > 0 then
+      table.insert(fails, '')
+      local fail_prefix = string.format('%s in %s: ', H.add_style('FAIL', 'fail'), stringid)
+      vim.list_extend(fails, H.add_prefix(exec.fails, fail_prefix))
+      n_fails = n_fails + #exec.fails
+    end
 
-    n_fails = n_fails + #exec.fails
-    n_notes = n_notes + #exec.notes
-
-    local cur_fails_notes = {}
-    vim.list_extend(cur_fails_notes, H.add_prefix(exec.fails, fail_prefix))
-    vim.list_extend(cur_fails_notes, H.add_prefix(exec.notes, note_prefix))
-
-    if #cur_fails_notes > 0 then
-      cur_fails_notes = vim.split(table.concat(cur_fails_notes, '\n'), '\n')
-      vim.list_extend(res, cur_fails_notes)
-
-      -- Add empty line to separate fails and notes from different cases
-      table.insert(res, '')
+    if #exec.notes > 0 then
+      table.insert(notes, '')
+      local note_color = #exec.fails > 0 and 'fail' or 'pass'
+      local note_prefix = string.format('%s in %s: ', H.add_style('NOTE', note_color), stringid)
+      vim.list_extend(notes, H.add_prefix(exec.notes, note_prefix))
+      n_notes = n_notes + #exec.notes
     end
   end
 
+  -- Show all fails first, then all notes
   local header = string.format('Fails (%s) and Notes (%s)', n_fails, n_notes)
-  table.insert(res, 1, H.add_style(header, 'emphasis'))
+  local res = { H.add_style(header, 'emphasis') }
+  vim.list_extend(res, fails)
+  vim.list_extend(res, notes)
 
-  return res
+  return vim.split(table.concat(res, '\n'), '\n')
 end
 
 -- Buffer reporter utilities --------------------------------------------------

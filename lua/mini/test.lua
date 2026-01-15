@@ -665,8 +665,24 @@ MiniTest.expect = {}
 
 --- Expect equality of two objects
 ---
---- Equality is tested via |vim.deep_equal()|.
+--- Equality is tested via |vim.deep_equal()|. It also tries to compute more
+--- detailed cause for equality (for easier spotting the difference):
+--- - If they have different types.
+--- - For strings if they have different length or if some character is different.
+--- - For tables it shows a "key branch" at which values are different along with
+---   the actual values. A single difference is shown, there might be more.
+---   For not nested tables key branch is just a key. If the difference is inside
+---   nested tables, the key branch shows a "path through nested tables" to
+---   a different value. Examples: >lua
 ---
+---     local eq = MiniTest.expect.equality
+---     eq({ 1, 2 }, { 1, 3 })         -- Key branch is `2`
+---     eq({ 1, { 2 } }, { 1, 'c' })   -- Key branch is `2` ('c' is not a table)
+---     eq({ 1, { 2 } }, { 1, { 3 } }) -- Key branch is `2->1`
+---
+---     -- Key branch is either `1->1->"a"` or `1->1->"b"`
+---     eq({ { { a = 1 } } }, { { { b = 2 } } })
+--- <
 ---@param left any First object.
 ---@param right any Second object.
 ---@param opts table|nil Options. Possible fields:
@@ -676,7 +692,8 @@ MiniTest.expect.equality = function(left, right, opts)
 
   opts = opts or {}
   local fail_reason = H.normalize_reason(opts.fail_reason, 'Failed expectation for equality', left, right)
-  local context = string.format('Left:  %s\nRight: %s', vim.inspect(left), vim.inspect(right))
+  local cause = H.compute_no_equality_cause(left, right)
+  local context = string.format('Cause: %s\nLeft:  %s\nRight: %s', cause, vim.inspect(left), vim.inspect(right))
   H.error_with_emphasis(fail_reason, context)
 end
 
@@ -2253,6 +2270,55 @@ H.traceback = function()
   end
 
   return res
+end
+
+H.compute_no_equality_cause = function(left, right)
+  if type(left) ~= type(right) then return 'different types' end
+
+  if type(left) == 'string' then
+    if vim.fn.strchars(left) ~= vim.fn.strchars(right) then return 'different string length' end
+    for i = 1, vim.fn.strchars(left) do
+      local lchar, rchar = vim.fn.strcharpart(left, i - 1, 1), vim.fn.strcharpart(right, i - 1, 1)
+      if lchar ~= rchar then
+        return string.format('different character at position %s', i)
+          .. string.format(', left = %s, right = %s', vim.inspect(lchar), vim.inspect(rchar))
+      end
+    end
+  end
+
+  if type(left) ~= 'table' then return 'different values' end
+
+  -- Find key branch with different values
+  local traverse
+  traverse = function(branch, diff, a, b)
+    if not (type(a) == 'table' and type(b) == 'table') then return end
+    local keys = vim.tbl_keys(a)
+    table.sort(keys, function(x, y) return tostring(x) < tostring(y) end)
+    for _, k in ipairs(keys) do
+      if not vim.deep_equal(a[k], b[k]) then
+        table.insert(branch, k)
+        diff.left, diff.right = a[k], b[k]
+        return traverse(branch, diff, a[k], b[k])
+      end
+    end
+  end
+
+  -- - Traverse with both table orders to find the longest possible branch.
+  --   This also covers the "present in one but not the other" cases.
+  local left_branch, left_diff = {}, {}
+  traverse(left_branch, left_diff, left, right)
+  local right_branch, right_diff = {}, {}
+  traverse(right_branch, right_diff, right, left)
+
+  local branch, ldiff, rdiff = left_branch, left_diff.left, left_diff.right
+  if #left_branch < #right_branch then
+    branch, ldiff, rdiff = right_branch, right_diff.right, right_diff.left
+  end
+  ldiff = vim.inspect(ldiff, { newline = ' ', indent = '' })
+  rdiff = vim.inspect(rdiff, { newline = ' ', indent = '' })
+  local key_branch = table.concat(vim.tbl_map(vim.inspect, branch), '->')
+  return string.format('different values at key %s%s', #branch > 1 and 'branch ' or '', key_branch)
+    .. string.format(', left = %s, right = %s', ldiff, rdiff)
 end
 
 -- Screenshots ----------------------------------------------------------------

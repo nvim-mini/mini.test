@@ -528,8 +528,24 @@ Usage ~
               `MiniTest.expect.equality`({left}, {right}, {opts})
 Expect equality of two objects
 
-Equality is tested via |vim.deep_equal()|.
+Equality is tested via |vim.deep_equal()|. It also tries to compute more
+detailed cause for equality (for easier spotting the difference):
+- If they have different types.
+- For strings if they have different length or if some character is different.
+- For tables it shows a "key branch" at which values are different along with
+  the actual values. A single difference is shown, there might be more.
+  For not nested tables key branch is just a key. If the difference is inside
+  nested tables, the key branch shows a "path through nested tables" to
+  a different value. Examples: >lua
 
+    local eq = MiniTest.expect.equality
+    eq({ 1, 2 }, { 1, 3 })         -- Key branch is `2`
+    eq({ 1, { 2 } }, { 1, 'c' })   -- Key branch is `2` ('c' is not a table)
+    eq({ 1, { 2 } }, { 1, { 3 } }) -- Key branch is `2->1`
+
+    -- Key branch is either `1->1->"a"` or `1->1->"b"`
+    eq({ { { a = 1 } } }, { { { b = 2 } } })
+<
 Parameters ~
 {left} `(any)` First object.
 {right} `(any)` Second object.

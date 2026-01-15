@@ -2376,7 +2376,7 @@ H.screenshot_compare_part = function(part, ref, obs, opts)
 
   local compare = function(x, y, desc)
     if x == y then return true, '' end
-    return false, ('Different %s. Reference: %s. Observed: %s.'):format(desc, vim.inspect(x), vim.inspect(y))
+    return false, ('Cause: different %s, reference = %s, observed = %s'):format(desc, vim.inspect(x), vim.inspect(y))
   end
 
   local ok, cause

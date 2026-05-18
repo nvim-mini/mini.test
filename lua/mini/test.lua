@@ -616,18 +616,28 @@ MiniTest.execute = function(cases, opts)
   end
   opts.reporter = reporter
 
-  -- Start execution
+  -- Plan execution in order
   H.cache = { is_executing = true }
 
-  vim.schedule(function() H.exec_callable(reporter.start, cases) end)
-
+  local queue = {}
+  table.insert(queue, function() H.exec_callable(reporter.start, cases) end)
   for case_num, cur_case in ipairs(cases) do
-    H.schedule_case(cur_case, case_num, opts)
+    table.insert(queue, H.make_case(cur_case, case_num, opts))
   end
+  table.insert(queue, function() H.exec_callable(reporter.finish) end)
+  -- - Use separate call to ensure that `reporter.finish` error won't interfere
+  table.insert(queue, function() H.cache.is_executing = false end)
 
-  vim.schedule(function() H.exec_callable(reporter.finish) end)
-  -- Use separate call to ensure that `reporter.finish` error won't interfere
-  vim.schedule(function() H.cache.is_executing = false end)
+  -- Execute queue ensuring order
+  -- NOTE: Directly `vim.schedule` each step without an explicit queue handling
+  -- is possible, but it might interfere with async-adjacent yet synchronous
+  -- functions (as `vim.wait()`) callsed inside cases outside of child process.
+  local exec_queue_step, n_queue = function(_) end, #queue
+  exec_queue_step = function(n)
+    queue[n]()
+    if n < n_queue then vim.schedule(function() exec_queue_step(n + 1) end) end
+  end
+  vim.schedule(function() exec_queue_step(1) end)
 end
 
 --- Stop test execution
@@ -1784,7 +1794,7 @@ H.execute_project_script = function(...)
   return success
 end
 
-H.schedule_case = function(case, case_num, opts)
+H.make_case = function(case, case_num, opts)
   local update_state = function(state)
     case.exec.state = state
     H.exec_callable(opts.reporter.update, case_num)
@@ -1830,7 +1840,7 @@ H.schedule_case = function(case, case_num, opts)
     end
   end
 
-  vim.schedule(function()
+  return function()
     if H.cache.should_stop_execution then return end
 
     case.exec = { fails = {}, notes = {} }
@@ -1840,7 +1850,7 @@ H.schedule_case = function(case, case_num, opts)
     local exec_data = case.exec
 
     local ok_case
-    for cur_try = 1, case.n_retry do
+    for _ = 1, case.n_retry do
       -- Ensure that fails and notes are not accumulated during retries
       case.exec = vim.deepcopy(exec_data)
 
@@ -1871,7 +1881,7 @@ H.schedule_case = function(case, case_num, opts)
     update_state(H.case_final_state(case))
 
     if not ok_case and opts.stop_on_error then MiniTest.stop() end
-  end)
+  end
 end
 
 -- Work with test cases -------------------------------------------------------
